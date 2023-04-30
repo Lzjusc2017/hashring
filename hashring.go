@@ -1,4 +1,4 @@
-package hashring
+package main
 
 import (
 	"crypto/sha1"
@@ -26,15 +26,15 @@ func (p nodesArray) Less(i, j int) bool { return p[i].spotValue < p[j].spotValue
 func (p nodesArray) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 func (p nodesArray) Sort()              { sort.Sort(p) }
 
-//HashRing store nodes and weigths
+// HashRing store nodes and weigths
 type HashRing struct {
-	virualSpots int
-	nodes       nodesArray
+	virualSpots int        //虚拟个数
+	nodes       nodesArray //虚拟节点
 	weights     map[string]int
 	mu          sync.RWMutex
 }
 
-//NewHashRing create a hash ring with virual spots
+// NewHashRing create a hash ring with virual spots
 func NewHashRing(spots int) *HashRing {
 	if spots == 0 {
 		spots = DefaultVirualSpots
@@ -47,7 +47,7 @@ func NewHashRing(spots int) *HashRing {
 	return h
 }
 
-//AddNodes add nodes to hash ring
+// AddNodes add nodes to hash ring
 func (h *HashRing) AddNodes(nodeWeight map[string]int) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -57,7 +57,7 @@ func (h *HashRing) AddNodes(nodeWeight map[string]int) {
 	h.generate()
 }
 
-//AddNode add node to hash ring
+// AddNode add node to hash ring
 func (h *HashRing) AddNode(nodeKey string, weight int) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -65,7 +65,7 @@ func (h *HashRing) AddNode(nodeKey string, weight int) {
 	h.generate()
 }
 
-//RemoveNode remove node
+// RemoveNode remove node
 func (h *HashRing) RemoveNode(nodeKey string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -73,7 +73,7 @@ func (h *HashRing) RemoveNode(nodeKey string) {
 	h.generate()
 }
 
-//UpdateNode update node with weight
+// UpdateNode update node with weight
 func (h *HashRing) UpdateNode(nodeKey string, weight int) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -83,14 +83,16 @@ func (h *HashRing) UpdateNode(nodeKey string, weight int) {
 
 func (h *HashRing) generate() {
 	var totalW int
+	//总权重
 	for _, w := range h.weights {
 		totalW += w
 	}
-
+	//总共的虚拟节点 = 数目x节点个数
 	totalVirtualSpots := h.virualSpots * len(h.weights)
 	h.nodes = nodesArray{}
 
 	for nodeKey, w := range h.weights {
+		//各个节点的虚拟节点个数占比
 		spots := int(math.Floor(float64(w) / float64(totalW) * float64(totalVirtualSpots)))
 		for i := 1; i <= spots; i++ {
 			hash := sha1.New()
@@ -100,10 +102,12 @@ func (h *HashRing) generate() {
 				nodeKey:   nodeKey,
 				spotValue: genValue(hashBytes[6:10]),
 			}
+			//添加虚拟节点
 			h.nodes = append(h.nodes, n)
 			hash.Reset()
 		}
 	}
+	//节点排序
 	h.nodes.Sort()
 }
 
@@ -115,7 +119,7 @@ func genValue(bs []byte) uint32 {
 	return v
 }
 
-//GetNode get node with key
+// GetNode get node with key
 func (h *HashRing) GetNode(s string) string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -127,6 +131,7 @@ func (h *HashRing) GetNode(s string) string {
 	hash.Write([]byte(s))
 	hashBytes := hash.Sum(nil)
 	v := genValue(hashBytes[6:10])
+
 	i := sort.Search(len(h.nodes), func(i int) bool { return h.nodes[i].spotValue >= v })
 
 	if i == len(h.nodes) {
