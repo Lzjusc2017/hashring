@@ -1,7 +1,8 @@
-package hashring
+package main
 
 import (
 	//	"fmt"
+	"fmt"
 	"testing"
 )
 
@@ -12,6 +13,7 @@ const (
 )
 
 func getNodesCount(nodes nodesArray) (int, int, int) {
+	//统计各个虚拟节点的数目
 	node1Count := 0
 	node2Count := 0
 	node3Count := 0
@@ -37,11 +39,12 @@ func TestHash(t *testing.T) {
 	nodeWeight := make(map[string]int)
 	nodeWeight[node1] = 2
 	nodeWeight[node2] = 2
-	nodeWeight[node3] = 3
+	nodeWeight[node3] = 2
 	vitualSpots := 100
 
+	//生成哈希环
 	hash := NewHashRing(vitualSpots)
-
+	//添加节点
 	hash.AddNodes(nodeWeight)
 	if hash.GetNode("1") != node3 {
 		t.Fatalf("expetcd %v got %v", node3, hash.GetNode("1"))
@@ -54,7 +57,8 @@ func TestHash(t *testing.T) {
 	}
 	c1, c2, c3 := getNodesCount(hash.nodes)
 	t.Logf("len of nodes is %v after AddNodes node1:%v, node2:%v, node3:%v", len(hash.nodes), c1, c2, c3)
-
+	//移除节点3，然后重新生成
+	fmt.Println(hash.nodes)
 	hash.RemoveNode(node3)
 	if hash.GetNode("1") != node1 {
 		t.Fatalf("expetcd %v got %v", node1, hash.GetNode("1"))
@@ -67,7 +71,7 @@ func TestHash(t *testing.T) {
 	}
 	c1, c2, c3 = getNodesCount(hash.nodes)
 	t.Logf("len of nodes is %v after RemoveNode node1:%v, node2:%v, node3:%v", len(hash.nodes), c1, c2, c3)
-
+	//添加节点3
 	hash.AddNode(node3, 3)
 	if hash.GetNode("1") != node3 {
 		t.Fatalf("expetcd %v got %v", node3, hash.GetNode("1"))
